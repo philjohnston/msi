@@ -48,7 +48,7 @@ if os.path.isfile(outputFileName) :
     sys.exit("Data for this subject already exists")
 
 #setup log file
-logFile = 'data' + os.sep + 'msi_a' + os.sep + 'msi_a_sub' + subj + '_log.csv'
+logFile = 'data' + os.sep + 'logfiles' + os.sep + 'msi_a' + os.sep + 'msi_a_sub' + subj + '_log.csv'
 
 #check refresh rate
 actual_framerate = win.getActualFrameRate(nIdentical=100, nMaxFrames=1000,
@@ -169,28 +169,32 @@ for block in range(num_blocks):
         key_prompt.draw()
         win.flip()
         trialClock.reset()
-        keys = event.waitKeys(timeStamped=trialClock, keyList = ['left', 'right', 'escape', 'ctrl', 'backspace'], maxWait = 2)
+        keys = event.waitKeys(timeStamped=trialClock, keyList = ['left', 'right', 'escape', 'ctrl'], maxWait = 2)
         
         if keys == None: # check for no response
             keys=[['NaN', 'NaN']]
-        elif keys[0][0] == 'escape': #data saves on quit
-            win.close()
-            df = pd.DataFrame(all_responses)
-            df.columns = ['subj', 'block', 'trial', 'SOA', 'resp', 'rt']
-            df.to_csv(outputFileName)
-            core.quit()
-        elif keys[0][0] == 'backspace': #data doesn't save (for debugging)
+        elif keys[0][0] == 'escape': #data saves on quit unless practice
+            if subj == 'p':
+                pass
+            else:
+                win.close()
+                df = pd.DataFrame(all_responses)
+                df.columns = ['subj', 'block', 'trial', 'SOA', 'resp', 'rt']
+                df.to_csv(outputFileName)
             win.close()
             core.quit()
             
         trial_responses = [subj, block + 1, trial_count, SOA*10, keys[0][0], keys[0][1]]
         all_responses.append(trial_responses)
         
-        #write to log file
-        with open(logFile, 'a') as fd:
-            wr = csv.writer(fd, dialect='excel')
-            wr.writerow(trial_responses)
-        
+        #write to log file unless practice
+        if subj != 'p':
+            with open(logFile, 'a') as fd:
+                wr = csv.writer(fd, dialect='excel')
+                wr.writerow(trial_responses)
+        else:
+            pass
+            
         win.flip()
         core.wait(0.75) #ITI
 
