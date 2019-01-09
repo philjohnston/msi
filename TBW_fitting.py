@@ -37,7 +37,6 @@ df.resp_recode = df.resp_recode.replace('right', 'sync')
 df.resp_recode = df.resp_recode.replace('left', 'async')
 
 #%% calculate synchrony rate
-
 df_rate = pd.crosstab(index=df['SOA'], columns=df['resp_recode'], margins = True, margins_name = 'total')
 df_rate['SOA'] = df_rate.index
 df_rate['sync_rate'] = df_rate['sync']/df_rate['total']
@@ -47,7 +46,8 @@ df_rate = df_rate.drop(['total'], axis = 0)
 df_rate = df_rate.astype('float')
 
 #%%fit curves
-    
+
+#residual function (sigmoid)    
 def residual(params, x, data):
     a = params['a']
     b = params['b']
@@ -71,17 +71,17 @@ l_result = l_minner.minimize()
 
 report_fit(l_result)
 
-###extract parameters from model
+###extract left parameters from model
 left_a = l_result.params['a'].value
 left_b = l_result.params['b'].value
 left_c = l_result.params['c'].value
 
-###solve for SOAs
+###solve for left SOAs
 x = Symbol('x')
 ASOA50 = solve(left_a / (1 + 2.71828 ** (-left_b * (x - left_c))) - 0.5, x, rational = False)[0] #unclear why np.exp() doesn't work
 ASOA95 = solve(left_a / (1 + 2.71828 ** (-left_b * (x - left_c))) - 0.05, x, rational = False)[0]
 
-###generate sigmoid line data
+###generate left sigmoid line data
 x_l_fun = np.linspace(-300, 0, 500)
 y_l_fun = left_a / (1 + np.exp(-left_b * (x_l_fun - left_c)))
 
@@ -99,7 +99,7 @@ r_result = r_minner.minimize()
 
 report_fit(r_result)
 
-###extract parameters from model
+###extract right parameters from model
 right_a = r_result.params['a'].value
 right_b = r_result.params['b'].value
 right_c = r_result.params['c'].value
@@ -109,7 +109,7 @@ x = Symbol('x')
 VSOA50 = solve(right_a / (1 + 2.71828 ** (-right_b * (x - right_c))) - 0.5, x, rational = False)[0] #unclear why np.exp() doesn't work
 VSOA95 = solve(right_a / (1 + 2.71828 ** (-right_b * (x - right_c))) - 0.05, x, rational = False)[0]
 
-###generate sigmoid line data
+###generate right sigmoid line data
 x_r_fun = np.linspace(0, 300, 500)
 y_r_fun = right_a / (1 + np.exp(-right_b * (x_r_fun - right_c)))
 
@@ -134,12 +134,13 @@ try:
     plt.plot(VSOA95, 0.05, 'k+')
     plt.annotate(str(round(VSOA95,2)), (VSOA95, 0.05))
     
- 
+    #format plot
     plt.title('msi_a_sub' + subj)
     plt.ylabel('Rate of synchrony perception')
     plt.xlabel('SOA (ms)')
-
     plt.draw()
+    
+    #save plot
     savefig('data' + os.sep + 'plots' + os.sep + 'msi_a_sub' + subj + '_TBW.png', bbox_inches='tight')
 except ImportError:
     pass
