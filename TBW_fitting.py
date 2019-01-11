@@ -21,7 +21,8 @@ import pickle
 os.chdir('C:/data/pjohnston/msi/')
 
 #get subj number from command line
-subj = str(sys.argv[1])
+#subj = str(sys.argv[1])
+subj = str(994)
 
 #check for existing output filename
 output_filename = "data" + os.sep + "SOAs" + os.sep + "msi_a_sub" + subj + "_SOAs.csv"
@@ -30,11 +31,6 @@ if os.path.isfile(output_filename):
 
 #load data
 df = pd.read_csv('data' + os.sep + 'msi_a' + os.sep + 'msi_a_sub' + subj + '.csv')
-
-#recode responses
-df['resp_recode'] = df.resp
-df.resp_recode = df.resp_recode.replace('right', 'sync')
-df.resp_recode = df.resp_recode.replace('left', 'async')
 
 #%% calculate synchrony rate
 df_rate = pd.crosstab(index=df['SOA'], columns=df['resp_recode'], margins = True, margins_name = 'total')

@@ -37,6 +37,15 @@ subgui.addField("Subject ID:")
 subgui.show()
 subj = subgui.data[0]
 
+#determine counterbalance (0: left=sync, 1: right=sync)
+cb = int(subj) % 2
+
+#determine how to recode responses
+if cb == 0:
+    resp_dict = {'left':'sync', 'right':'async', 'NaN':'NaN'}
+elif cb == 1:
+    resp_dict = {'left':'async', 'right':'sync', 'NaN':'NaN'}
+
 #check for existing SOA file and make experimenter manually verify correct file based on timestamp
 SOA_filename = 'data' + os.sep + 'SOAs' + os.sep + 'msi_a_sub' + str(subj) + '_SOAs.csv'
 
@@ -95,10 +104,22 @@ flash = visual.RadialStim(win, size = 0.15, radialCycles = 1, radialPhase = 1/2,
 #create fixation
 fixation = visual.TextStim(win, text = "+", color = "white", height = 0.06)
 
+#create responses prompt (counterbalanced)
+prompt = visual.TextStim(win, text = "Simultaneous?", height = 0.073, pos = (0, 0.15))
 
-#intstruction screen
-instructions = visual.TextStim(win, text = u"""You will hear a beep and see a flash. When prompted, please use the left and right arrow keys to report whether they occur simultaneously or not. Press any key to begin.
-                                                       ← = NO              → = YES""", height = 0.075, pos = (0,0))
+if cb == 0:
+    key_prompt = visual.TextStim(win, text = "   YES                              NO   ", height = 0.073, pos = (0, -0.3))
+elif cb == 1:
+    key_prompt = visual.TextStim(win, text = "   NO                              YES   ", height = 0.073, pos = (0, -0.3))
+
+
+#instruction screen
+if cb == 1:
+    instructions = visual.TextStim(win, text = u"""You will hear a beep and see a flash. When prompted, please use the left and right arrow keys to report whether they occur simultaneously or not. Press any key to begin.
+                                                        ← = NO              → = YES""", height = 0.075, pos = (0,0))
+elif cb == 0:
+    instructions = visual.TextStim(win, text = u"""You will hear a beep and see a flash. When prompted, please use the left and right arrow keys to report whether they occur simultaneously or not. Press any key to begin.
+                                                        ← = YES              → = NO""", height = 0.075, pos = (0,0))
 start_prompt = visual.TextStim(win, text = "Press any key to begin", height = -0.075)
 instructions.draw()
 win.flip()
@@ -191,8 +212,6 @@ for block in range(num_blocks):
         core.wait(0.75)
         
         #collect response
-        prompt = visual.TextStim(win, text = "Simultaneous?", height = 0.073, pos = (0, 0.15))
-        key_prompt = visual.TextStim(win, text = "   NO                              YES   ", height = 0.073, pos = (0, -0.3))
         prompt.draw()
         key_prompt.draw()
         win.flip()
@@ -204,11 +223,13 @@ for block in range(num_blocks):
         elif keys[0][0] == 'escape': #data saves on quit
             win.close()
             df = pd.DataFrame(all_responses)
-            df.columns = ['subj', 'block', 'trial', 'SOA_label', 'SOA', 'resp', 'rt']
+            df.columns = ['subj', 'block', 'trial', 'SOA', 'resp', 'resp_recode', 'rt']
             df.to_csv(outputFileName)
             core.quit()
             
-        trial_responses = [subj, block + 1, trial_count, SOA[0], SOA[1], keys[0][0], keys[0][1]]
+        resp = keys[0][0]
+        
+        trial_responses = [subj, block + 1, trial_count, SOA[0], resp, resp_dict[resp], keys[0][1]]
         all_responses.append(trial_responses)
         
         #write to log file
@@ -228,6 +249,6 @@ event.waitKeys()
 win.close()
 
 df = pd.DataFrame(all_responses)
-df.columns = ['subj', 'block', 'trial', 'SOA_label', 'SOA', 'resp', 'rt']
+df.columns = ['subj', 'block', 'trial', 'SOA', 'resp', 'resp_recode', 'rt']
 df.to_csv(outputFileName)
 
