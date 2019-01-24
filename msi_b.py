@@ -23,7 +23,9 @@ import matplotlib.pyplot as plt
 import csv
 import pandas as pd
 from datetime import datetime
+from psychopy import parallel
 
+parallel.setPortAddress(0xB010)
 
 #system setup
 framerate = 100 #For debugging purposes only. Must be 100 for data collection 
@@ -43,8 +45,10 @@ cb = int(subj) % 2
 #determine how to recode responses
 if cb == 0:
     resp_dict = {'left':'sync', 'right':'async', 'NaN':'NaN'}
+    resp_trig = {'left': 2, 'right': 1}
 elif cb == 1:
     resp_dict = {'left':'async', 'right':'sync', 'NaN':'NaN'}
+    resp_trig = {'left': 1, 'right': 2}
 
 #check for existing SOA file and make experimenter manually verify correct file based on timestamp
 SOA_filename = 'data' + os.sep + 'SOAs' + os.sep + 'msi_a_sub' + str(subj) + '_SOAs.csv'
@@ -63,12 +67,12 @@ else:
 
 #get SOAs and assign to list of the form ['label', duration]
 SOAs = pd.read_csv(SOA_filename)
-ASOA50r = ['ASOA50r', int(SOAs.ASOA50r[0])]
-ASOA95r = ['ASOA95r', int(SOAs.ASOA95r[0])]
-VSOA50r = ['VSOA50r', int(SOAs.VSOA50r[0])]
-VSOA95r = ['VSOA95r', int(SOAs.VSOA95r[0])]
-A10 = ['A10', -10]
-V10 = ['V10', 10]
+ASOA50r = ['ASOA50r', int(SOAs.ASOA50r[0]), 50]
+ASOA95r = ['ASOA95r', int(SOAs.ASOA95r[0]), 95]
+VSOA50r = ['VSOA50r', int(SOAs.VSOA50r[0]), 150]
+VSOA95r = ['VSOA95r', int(SOAs.VSOA95r[0]),195]
+A10 = ['A10', -10, 10]
+V10 = ['V10', 10, 110]
 
 #setup
 win = visual.Window(fullscr=True, allowGUI=False, color="black", screen=0, units='height', waitBlanking=True)
@@ -76,7 +80,6 @@ trialClock = core.Clock()
 all_responses = []
 
 num_blocks = 4
-#SOA_list= 4*[-30, -25, -20, -15, -10, -8, -5, -2, -1, 0, 1, 2, 5, 8, 10, 15, 20, 25, 30] # SOA (in number of frames)
 SOA_list = 32*[ASOA50r, VSOA50r] + 16*[ASOA95r, A10, V10, VSOA95r]
 
 #check for existing subject file
@@ -150,7 +153,6 @@ for block in range(num_blocks):
         
         fixation.draw()
         win.flip()
-        #trigger fixation start here
         
         #jitter initial fixation
         jitter = random.randint(100,150)
@@ -162,22 +164,34 @@ for block in range(num_blocks):
         
         fixation.draw()
         win.flip()
-        
+
         if corrected_SOA < 0: #auditory then visual
             
             #beep
             beep.play()
             
+            fixation.draw()
+            win.flip()
+            fixation.draw()
+            win.flip()
+            parallel.setData(SOA[2])
+            
             #SOA
-            for frameN in range(-1*corrected_SOA):
+            for frameN in range(-1*corrected_SOA -2):
                 fixation.draw()
                 win.flip()
+                
+                if frameN == 0:
+                    parallel.setData(0)
             
             #flash
             flash.draw()
             fixation.draw()
             win.flip()
-            #trigger here
+            
+            if corrected_SOA == -2: # then for loop above won't be entered, so set all pins to 0 here
+                parallel.setData(0)
+            
             fixation.draw()
             win.flip()
             
@@ -187,8 +201,10 @@ for block in range(num_blocks):
             fixation.draw()
             win.flip()
             #trigger here
+            parallel.setData(SOA[2])
             fixation.draw()
             win.flip()
+            parallel.setData(0)
             
         else: #visual then auditory (this coding would logically give 10ms less than expected, but it checks out with the oscilloscope?)
             
@@ -197,9 +213,13 @@ for block in range(num_blocks):
             fixation.draw()
             win.flip()
             #trigger here
+            parallel.setData(SOA[2])
+            fixation.draw()
+            win.flip()
+            parallel.setData(0)
             
             #SOA
-            for frameN in range(corrected_SOA-1):
+            for frameN in range(corrected_SOA-2):
                 fixation.draw()
                 win.flip()
             
@@ -220,14 +240,17 @@ for block in range(num_blocks):
         
         if keys == None: # check for no response
             keys=[['NaN', 'NaN']]
+            parallel.setData(3) #send no response trigger
+            resp=keys[0][0]
         elif keys[0][0] == 'escape': #data saves on quit
             win.close()
             df = pd.DataFrame(all_responses)
             df.columns = ['subj', 'block', 'trial', 'SOA', 'resp', 'resp_recode', 'rt']
             df.to_csv(outputFileName)
             core.quit()
-            
-        resp = keys[0][0]
+        else:
+            resp = keys[0][0]
+            parallel.setData(resp_trig[resp])
         
         trial_responses = [subj, block + 1, trial_count, SOA[0], resp, resp_dict[resp], keys[0][1]]
         all_responses.append(trial_responses)
@@ -238,6 +261,7 @@ for block in range(num_blocks):
             wr.writerow(trial_responses)
             
         win.flip()
+        parallel.setData(0) #zero all pins
         core.wait(0.75) #ITI
 
 #thank you screen
