@@ -21,8 +21,7 @@ import pickle
 os.chdir('C:/data/pjohnston/msi/')
 
 #get subj number from command line
-#subj = str(sys.argv[1])
-subj = str(994)
+subj = str(sys.argv[1])
 
 #check for existing output filename
 output_filename = "data" + os.sep + "SOAs" + os.sep + "msi_a_sub" + subj + "_SOAs.csv"
